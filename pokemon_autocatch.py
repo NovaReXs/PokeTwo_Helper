@@ -62,7 +62,7 @@ DRY_RUN = False
 # ID user atau role yang di-ping saat Pokémon langka muncul.
 # Contoh User: "<@123456789012345678>" | Contoh Role: "<@&123456789012345678>"
 # Kosongkan "" jika tidak ingin nge-ping. (ID Anda di bawah)
-RARE_PING_ID = "<1502342878708633611>"
+RARE_PING_ID = "<@1502342878708633611>"
 
 # ─── RARE POKÉMON LIST ───────────────────────────────────────────────────────
 RARE_POKEMON = {
