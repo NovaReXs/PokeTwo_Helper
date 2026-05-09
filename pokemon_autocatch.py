@@ -50,7 +50,7 @@ POKETWO_ID = 716390085896962058
 WATCHED_CHANNEL_IDS_1: list[int] = [1502127674850545774]
 
 # Helper mode channels (command !helper2)
-WATCHED_CHANNEL_IDS_2: list[int] = [1498511187845845077]
+WATCHED_CHANNEL_IDS_2: list[int] = []
 
 # Delay range before catching (in seconds) — mimics human reaction time
 CATCH_DELAY_MIN = 1.0
@@ -62,7 +62,7 @@ DRY_RUN = False
 # ID user atau role yang di-ping saat Pokémon langka muncul.
 # Contoh User: "<@123456789012345678>" | Contoh Role: "<@&123456789012345678>"
 # Kosongkan "" jika tidak ingin nge-ping. (ID Anda di bawah)
-RARE_PING_ID = "<@273351260273508352>", "<@406091992032870401>", "<@1325007411576049796>"
+RARE_PING_ID = "<1502342878708633611>"
 
 # ─── RARE POKÉMON LIST ───────────────────────────────────────────────────────
 RARE_POKEMON = {
