@@ -116,7 +116,8 @@ client = discord.Client()
 recently_processed: set[int] = set()
 
 # Bot state
-catching_enabled = True
+enabled_1 = True
+enabled_2 = True
 mode_1 = "catch"
 mode_2 = "helper"
 
@@ -189,20 +190,42 @@ async def on_ready():
 
 @client.event
 async def on_message(message: discord.Message):
-    global catching_enabled, mode_1, mode_2
+    global enabled_1, enabled_2, mode_1, mode_2
 
     # ── Owner control commands (only YOU can use these) ──────────────────────
     if message.author.id == client.user.id:
         cmd = message.content.strip().lower()
 
         if cmd == "!stop":
-            catching_enabled = False
-            print("[*] PAUSED via command.")
+            enabled_1 = False
+            enabled_2 = False
+            print("[*] ALL PAUSED via command.")
             return
 
         elif cmd == "!start":
-            catching_enabled = True
-            print("[*] RESUMED via command.")
+            enabled_1 = True
+            enabled_2 = True
+            print("[*] ALL RESUMED via command.")
+            return
+
+        elif cmd == "!stop1":
+            enabled_1 = False
+            print("[*] Channels 1 PAUSED.")
+            return
+
+        elif cmd == "!start1":
+            enabled_1 = True
+            print("[*] Channels 1 RESUMED.")
+            return
+
+        elif cmd == "!stop2":
+            enabled_2 = False
+            print("[*] Channels 2 PAUSED.")
+            return
+
+        elif cmd == "!start2":
+            enabled_2 = True
+            print("[*] Channels 2 RESUMED.")
             return
 
         elif cmd == "!helper":
@@ -218,8 +241,9 @@ async def on_message(message: discord.Message):
             return
 
         elif cmd == "!status":
-            state = "RUNNING" if catching_enabled else "PAUSED"
-            print(f"[*] Status: {state} | Channels 1: {mode_1.upper()} | Channels 2: {mode_2.upper()}")
+            state1 = "RUNNING" if enabled_1 else "PAUSED"
+            state2 = "RUNNING" if enabled_2 else "PAUSED"
+            print(f"[*] Status | Channels 1: {state1} ({mode_1.upper()}) | Channels 2: {state2} ({mode_2.upper()})")
             return
 
         elif cmd == "!helper1":
@@ -253,22 +277,38 @@ async def on_message(message: discord.Message):
     if "tell us you're human" in msg_content or "verify.poketwo.net/captcha" in msg_content:
         # Check if the captcha is actually for THIS account (ID is in the link or we are mentioned)
         if str(client.user.id) in message.content or client.user in message.mentions:
-            catching_enabled = False
+            if mode_1 == "catch":
+                enabled_1 = False
+            if mode_2 == "catch":
+                enabled_2 = False
+                
             print("\n\a" + "!" * 70)  # \a plays a beep sound in terminal
             print("!!! WARNING: POKÉTWO CAPTCHA DETECTED !!!".center(70))
-            print("!!! AUTO-CATCHER HAS BEEN PAUSED TO PROTECT YOUR ACCOUNT !!!".center(70))
+            print("!!! AUTO-CATCHER CHANNELS HAVE BEEN PAUSED TO PROTECT YOUR ACCOUNT !!!".center(70))
             print("!" * 70)
             print(f"\nCaptcha Link: {message.content}\n")
             print("-> Please click the link and solve the Captcha manually.")
             print("-> Once solved, type '!start' in your bot console to resume catching.\n")
             print("!" * 70 + "\n")
+            
+            try:
+                await message.channel.send("<@716390085896962058> incense pause")
+                print("[*] Sent 'incense pause' to prevent incense waste.")
+            except Exception as e:
+                print(f"[!] Failed to send incense pause: {e}")
+                
             return
         else:
             print(f"[*] Ignored CAPTCHA warning meant for another user.")
 
-    # Filter channels
-    # Only process if the channel is explicitly in one of the two lists
-    if message.channel.id not in WATCHED_CHANNEL_IDS_1 and message.channel.id not in WATCHED_CHANNEL_IDS_2:
+    # Filter channels and get mode/state
+    if message.channel.id in WATCHED_CHANNEL_IDS_1:
+        current_mode = mode_1
+        is_enabled = enabled_1
+    elif message.channel.id in WATCHED_CHANNEL_IDS_2:
+        current_mode = mode_2
+        is_enabled = enabled_2
+    else:
         return
 
     # Avoid processing the same message twice
@@ -300,9 +340,9 @@ async def on_message(message: discord.Message):
     if not is_spawn or not image_url:
         return
 
-    # Check if catching is enabled
-    if not catching_enabled:
-        print("[*] Spawn detected but auto-catcher is paused — skipping.")
+    # Check if catching is enabled for this channel
+    if not is_enabled:
+        print("[*] Spawn detected but channel is paused — skipping.")
         return
 
     recently_processed.add(message.id)
@@ -334,14 +374,7 @@ async def on_message(message: discord.Message):
             except Exception as e:
                 print(f"[!] Gagal mengirim ping: {e}")
 
-    # Determine mode for this specific channel
-    if message.channel.id in WATCHED_CHANNEL_IDS_1:
-        current_mode = mode_1
-    elif message.channel.id in WATCHED_CHANNEL_IDS_2:
-        current_mode = mode_2
-    else:
-        # Should not reach here because of the filter above, but just in case:
-        current_mode = "helper"
+    # Mode is already determined above
 
     # ── Helper mode: announce instantly, no delay ─────────────────────────────
     if current_mode == "helper":
@@ -355,7 +388,8 @@ async def on_message(message: discord.Message):
     await asyncio.sleep(delay)
 
     # Re-check in case !stop was sent during the delay
-    if not catching_enabled:
+    is_enabled_now = enabled_1 if message.channel.id in WATCHED_CHANNEL_IDS_1 else enabled_2
+    if not is_enabled_now:
         print("[*] Catch aborted — paused during processing.")
         return
 
