@@ -46,11 +46,12 @@ if not DISCORD_TOKEN or DISCORD_TOKEN == "YOUR_DISCORD_USER_TOKEN_HERE":
 # Pokétwo official bot user ID
 POKETWO_ID = 716390085896962058
 
-# Auto-catch channels (command !catch1)
-WATCHED_CHANNEL_IDS_1: list[int] = [1502127674850545774]
-
-# Helper mode channels (command !helper2)
-WATCHED_CHANNEL_IDS_2: list[int] = []
+# Bot Groups and State
+groups = {
+    "1": {"channels": [1502127674850545774], "enabled": True, "mode": "catch"},
+    "2": {"channels": [1498511187845845077], "enabled": True, "mode": "helper"},
+    "3": {"channels": [], "enabled": True, "mode": "catch"},
+}
 
 # Delay range before catching (in seconds) — mimics human reaction time
 CATCH_DELAY_MIN = 1.0
@@ -115,12 +116,6 @@ client = discord.Client()
 # Track recently caught to avoid duplicates
 recently_processed: set[int] = set()
 
-# Bot state
-enabled_1 = True
-enabled_2 = True
-mode_1 = "catch"
-mode_2 = "helper"
-
 # ─── POKEMON IDENTIFIER ──────────────────────────────────────────────────────
 
 def crop_center_square(img: Image.Image) -> Image.Image:
@@ -182,88 +177,75 @@ async def identify_pokemon_from_url(image_url: str) -> str | None:
 @client.event
 async def on_ready():
     print(f"[OK] Logged in as: {client.user} ({client.user.id})")
-    print(f"[OK] Channels 1: {WATCHED_CHANNEL_IDS_1} (Mode: {mode_1.upper()})")
-    print(f"[OK] Channels 2: {WATCHED_CHANNEL_IDS_2} (Mode: {mode_2.upper()})")
-    print(f"[OK] Commands: !stop | !start | !status | !catch1 | !helper1 | !catch2 | !helper2")
+    for g, data in groups.items():
+        if data["channels"]:
+            print(f"[OK] Channels {g}: {data['channels']} (Mode: {data['mode'].upper()})")
+    print(f"[OK] Commands: !stop | !start | !status | !catch[1-3] | !helper[1-3] | !watch[1-3] | !addwatch[1-3] | !delwatch[1-3]")
     print("-" * 50)
 
 
 @client.event
 async def on_message(message: discord.Message):
-    global enabled_1, enabled_2, mode_1, mode_2
 
     # ── Owner control commands (only YOU can use these) ──────────────────────
     if message.author.id == client.user.id:
         cmd = message.content.strip().lower()
 
         if cmd == "!stop":
-            enabled_1 = False
-            enabled_2 = False
+            for g in groups: groups[g]["enabled"] = False
             print("[*] ALL PAUSED via command.")
             return
-
         elif cmd == "!start":
-            enabled_1 = True
-            enabled_2 = True
+            for g in groups: groups[g]["enabled"] = True
             print("[*] ALL RESUMED via command.")
             return
-
-        elif cmd == "!stop1":
-            enabled_1 = False
-            print("[*] Channels 1 PAUSED.")
-            return
-
-        elif cmd == "!start1":
-            enabled_1 = True
-            print("[*] Channels 1 RESUMED.")
-            return
-
-        elif cmd == "!stop2":
-            enabled_2 = False
-            print("[*] Channels 2 PAUSED.")
-            return
-
-        elif cmd == "!start2":
-            enabled_2 = True
-            print("[*] Channels 2 RESUMED.")
-            return
-
         elif cmd == "!helper":
-            mode_1 = "helper"
-            mode_2 = "helper"
+            for g in groups: groups[g]["mode"] = "helper"
             print("[*] Switched ALL to HELPER MODE (announce in channel).")
             return
-
         elif cmd == "!catch":
-            mode_1 = "catch"
-            mode_2 = "catch"
+            for g in groups: groups[g]["mode"] = "catch"
             print("[*] Switched ALL to AUTO-CATCH MODE.")
             return
-
         elif cmd == "!status":
-            state1 = "RUNNING" if enabled_1 else "PAUSED"
-            state2 = "RUNNING" if enabled_2 else "PAUSED"
-            print(f"[*] Status | Channels 1: {state1} ({mode_1.upper()}) | Channels 2: {state2} ({mode_2.upper()})")
+            for g, data in groups.items():
+                state = "RUNNING" if data["enabled"] else "PAUSED"
+                print(f"[*] Status | Group {g}: {state} ({data['mode'].upper()}) - Channels: {data['channels']}")
             return
 
-        elif cmd == "!helper1":
-            mode_1 = "helper"
-            print(f"[*] Channels 1 set to HELPER mode")
-            return
-
-        elif cmd == "!helper2":
-            mode_2 = "helper"
-            print(f"[*] Channels 2 set to HELPER mode")
-            return
-
-        elif cmd == "!catch1":
-            mode_1 = "catch"
-            print(f"[*] Channels 1 set to AUTO-CATCH mode")
-            return
-
-        elif cmd == "!catch2":
-            mode_2 = "catch"
-            print(f"[*] Channels 2 set to AUTO-CATCH mode")
+        # Dynamic commands for specific groups (e.g., !stop1, !watch2, !addwatch3)
+        match = re.match(r"^!(stop|start|helper|catch|watch|addwatch|delwatch)(\d+)$", cmd)
+        if match:
+            action, group = match.groups()
+            if group not in groups:
+                groups[group] = {"channels": [], "enabled": True, "mode": "catch"}
+            
+            if action == "stop":
+                groups[group]["enabled"] = False
+                print(f"[*] Group {group} PAUSED.")
+            elif action == "start":
+                groups[group]["enabled"] = True
+                print(f"[*] Group {group} RESUMED.")
+            elif action == "helper":
+                groups[group]["mode"] = "helper"
+                print(f"[*] Group {group} set to HELPER mode.")
+            elif action == "catch":
+                groups[group]["mode"] = "catch"
+                print(f"[*] Group {group} set to AUTO-CATCH mode.")
+            elif action == "watch":
+                groups[group]["channels"] = [message.channel.id]
+                ch_name = getattr(message.channel, 'name', 'Direct Message')
+                print(f"[*] Set group {group} to watch channel #{ch_name} ({message.channel.id}).")
+            elif action == "addwatch":
+                if message.channel.id not in groups[group]["channels"]:
+                    groups[group]["channels"].append(message.channel.id)
+                ch_name = getattr(message.channel, 'name', 'Direct Message')
+                print(f"[*] Added channel #{ch_name} ({message.channel.id}) to group {group}.")
+            elif action == "delwatch":
+                if message.channel.id in groups[group]["channels"]:
+                    groups[group]["channels"].remove(message.channel.id)
+                ch_name = getattr(message.channel, 'name', 'Direct Message')
+                print(f"[*] Removed channel #{ch_name} ({message.channel.id}) from group {group}.")
             return
 
     # Only respond to Pokétwo bot for catching
@@ -277,10 +259,9 @@ async def on_message(message: discord.Message):
     if "tell us you're human" in msg_content or "verify.poketwo.net/captcha" in msg_content:
         # Check if the captcha is actually for THIS account (ID is in the link or we are mentioned)
         if str(client.user.id) in message.content or client.user in message.mentions:
-            if mode_1 == "catch":
-                enabled_1 = False
-            if mode_2 == "catch":
-                enabled_2 = False
+            for g in groups.values():
+                if g["mode"] == "catch":
+                    g["enabled"] = False
                 
             print("\n\a" + "!" * 70)  # \a plays a beep sound in terminal
             print("!!! WARNING: POKÉTWO CAPTCHA DETECTED !!!".center(70))
@@ -302,14 +283,17 @@ async def on_message(message: discord.Message):
             print(f"[*] Ignored CAPTCHA warning meant for another user.")
 
     # Filter channels and get mode/state
-    if message.channel.id in WATCHED_CHANNEL_IDS_1:
-        current_mode = mode_1
-        is_enabled = enabled_1
-    elif message.channel.id in WATCHED_CHANNEL_IDS_2:
-        current_mode = mode_2
-        is_enabled = enabled_2
-    else:
+    current_group = None
+    for g, data in groups.items():
+        if message.channel.id in data["channels"]:
+            current_group = g
+            break
+            
+    if not current_group:
         return
+        
+    current_mode = groups[current_group]["mode"]
+    is_enabled = groups[current_group]["enabled"]
 
     # Avoid processing the same message twice
     if message.id in recently_processed:
@@ -388,7 +372,7 @@ async def on_message(message: discord.Message):
     await asyncio.sleep(delay)
 
     # Re-check in case !stop was sent during the delay
-    is_enabled_now = enabled_1 if message.channel.id in WATCHED_CHANNEL_IDS_1 else enabled_2
+    is_enabled_now = groups[current_group]["enabled"]
     if not is_enabled_now:
         print("[*] Catch aborted — paused during processing.")
         return
