@@ -43,11 +43,10 @@ Sebelum menjalankan bot, Anda perlu menyesuaikan beberapa pengaturan.
    ```
    *(Ingat: JANGAN bagikan token ini kepada siapa pun!)*
 
-2. **Channel Auto-Catch & Helper (`pokemon_autocatch.py`)**
-   Buka file `pokemon_autocatch.py` menggunakan Text Editor (seperti VSCode/Notepad). Atur ID dari Channel Discord tempat spawn Pokémon terjadi di bagian atas file:
-   - `WATCHED_CHANNEL_IDS_1`: Channel untuk mode *Auto-Catch*
-   - `WATCHED_CHANNEL_IDS_2`: Channel untuk mode *Helper*
-   *(Anda bisa mengubah pengaturan ini kapan saja melalui Commands di Discord).*
+2. **Sistem Grup Channel (`pokemon_autocatch.py`)**
+   Bot menggunakan sistem grup dinamis (secara default terdapat grup 1, 2, dan 3) yang menyimpan daftar channel dan mode yang dijalankan (*Auto-Catch* atau *Helper*).
+   - Pengaturan awal grup bisa diedit pada bagian `groups = { ... }` di atas file `pokemon_autocatch.py`.
+   *(Sangat disarankan untuk menambah, mengubah, atau menghapus channel secara dinamis langsung melalui Commands di Discord tanpa perlu mengedit file).*
 
 3. **Notifikasi Langka (Rare Ping ID)**
    Masukkan ID User atau Role yang ingin Anda *tag* ketika Pokémon langka muncul.
@@ -85,15 +84,18 @@ Sebelum menjalankan bot, Anda perlu menyesuaikan beberapa pengaturan.
 
 Anda dapat mengontrol bot dengan mengetikkan perintah berikut di chat Discord (Bot hanya akan merespon jika dikirim oleh akun bot itu sendiri):
 
-- `!stop` : Menghentikan sementara bot (*PAUSE*).
-- `!start` : Melanjutkan kembali bot (*RESUME*).
-- `!status` : Menampilkan status bot saat ini (Berjalan/Pause dan Mode masing-masing list) di terminal.
-- `!catch1` : Mengubah Channel List 1 menjadi mode **Auto-Catch**.
-- `!helper1` : Mengubah Channel List 1 menjadi mode **Helper**.
-- `!catch2` : Mengubah Channel List 2 menjadi mode **Auto-Catch**.
-- `!helper2` : Mengubah Channel List 2 menjadi mode **Helper**.
-- `!catch` : Mengubah **semua** Channel List menjadi mode Auto-Catch.
-- `!helper` : Mengubah **semua** Channel List menjadi mode Helper.
+Sistem kini menggunakan **Grup Dinamis** (misal grup 1, 2, 3, dst). Ganti `[X]` dengan nomor grup yang Anda inginkan (misal: 1, 2, 99). Jika grup belum ada, grup baru akan otomatis dibuat.
+
+- `!status` : Menampilkan status bot secara detail untuk semua grup yang aktif di terminal.
+- `!stop` / `!start` : Menghentikan sementara (*PAUSE*) / melanjutkan (*RESUME*) operasi bot di **semua** grup.
+- `!catch` / `!helper` : Mengubah mode **semua** grup menjadi *Auto-Catch* / *Helper*.
+
+**Perintah Spesifik per Grup Dinamis:**
+- `!watch[X]` : **Mengganti** daftar pantauan channel di grup `[X]` menjadi *hanya* channel tempat Anda mengetikkan command ini.
+- `!addwatch[X]` : **Menambahkan** channel tempat Anda mengetik command ke dalam daftar pantauan grup `[X]`.
+- `!delwatch[X]` : **Menghapus** channel tempat Anda mengetik command dari daftar pantauan grup `[X]`.
+- `!stop[X]` / `!start[X]` : Mem-*pause* atau me-*resume* operasi bot pada grup `[X]`.
+- `!catch[X]` / `!helper[X]` : Mengubah mode bot pada grup `[X]` menjadi *Auto-Catch* / *Helper*.
 
 ---
 
