@@ -196,8 +196,20 @@ async def on_message(message: discord.Message):
             print("[*] ALL PAUSED via command.")
             return
         elif cmd == "!start":
-            for g in groups: groups[g]["enabled"] = True
+            resumed_channels = set()
+            for g in groups: 
+                groups[g]["enabled"] = True
+                if groups[g]["mode"] == "catch":
+                    for ch_id in groups[g]["channels"]:
+                        resumed_channels.add(ch_id)
             print("[*] ALL RESUMED via command.")
+            for ch_id in resumed_channels:
+                try:
+                    ch = client.get_channel(ch_id)
+                    if ch:
+                        await ch.send("<@716390085896962058> incense resume")
+                except Exception:
+                    pass
             return
         elif cmd == "!helper":
             for g in groups: groups[g]["mode"] = "helper"
@@ -226,6 +238,14 @@ async def on_message(message: discord.Message):
             elif action == "start":
                 groups[group]["enabled"] = True
                 print(f"[*] Group {group} RESUMED.")
+                if groups[group]["mode"] == "catch":
+                    for ch_id in groups[group]["channels"]:
+                        try:
+                            ch = client.get_channel(ch_id)
+                            if ch:
+                                await ch.send("<@716390085896962058> incense resume")
+                        except Exception:
+                            pass
             elif action == "helper":
                 groups[group]["mode"] = "helper"
                 print(f"[*] Group {group} set to HELPER mode.")
@@ -272,11 +292,20 @@ async def on_message(message: discord.Message):
             print("-> Once solved, type '!start' in your bot console to resume catching.\n")
             print("!" * 70 + "\n")
             
-            try:
-                await message.channel.send("<@716390085896962058> incense pause")
-                print("[*] Sent 'incense pause' to prevent incense waste.")
-            except Exception as e:
-                print(f"[!] Failed to send incense pause: {e}")
+            paused_channels = set()
+            for g, data in groups.items():
+                if data["mode"] == "catch":
+                    for ch_id in data["channels"]:
+                        paused_channels.add(ch_id)
+            
+            for ch_id in paused_channels:
+                try:
+                    ch = client.get_channel(ch_id)
+                    if ch:
+                        await ch.send("<@716390085896962058> incense pause")
+                except Exception as e:
+                    print(f"[!] Failed to send incense pause to {ch_id}: {e}")
+            print("[*] Sent 'incense pause' to all catch channels to prevent incense waste.")
                 
             return
         else:
